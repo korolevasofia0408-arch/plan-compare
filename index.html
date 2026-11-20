@@ -362,7 +362,7 @@ ul.clean{margin:8px 0 0;padding-left:20px;display:flex;flex-direction:column;gap
 
 
 <section id="tab-src" hidden>
-<div class="panel" style="margin-bottom:16px"><h3>Миндаль, 60 га</h3><p>Параметры взяты из файлов «Миндаль.docx» и «Крым, с. Фрунзе (2).docx». Базовая цена в скорлупе 250 ₽/кг, урожайность 3 т/га, CAPEX 180 млн ₽. Погодовой выход на урожай, структура и график вложений являются допущениями расчёта. База без субсидий, сценарий получения 75 млн ₽ вынесен в стресс-тест. 15-летний горизонт отсчитывается от первого года инвестиций.</p></div>
+<div class="panel" style="margin-bottom:16px"><h3>Миндаль, 60 га</h3><p>Параметры взяты из файлов «Миндаль.docx» и «Крым, с. Фрунзе (2).docx». Базовая цена в скорлупе 400 ₽/кг, сбор 240 т на плато, CAPEX 180 млн ₽. Базовая господдержка 80 млн ₽, регулируется от 0 до 80 млн ₽. Погодовой выход на урожай, график вложений и поступление господдержки в 4-м году являются допущениями расчёта. 15-летний горизонт отсчитывается от первого года инвестиций.</p></div>
 
  <div style="margin-bottom:16px"><h2>Допущения и как считалось</h2><p class="lead">Данные по яблоневому саду (проект 100 га, презентация) и винограднику (100 га) взяты из внешних расчётов, по тюльпанам — из нашей модели. Все три проекта считаются как полностью финансируемые заёмными средствами. Страница восстанавливает денежные потоки и позволяет менять входные параметры.</p></div>
 
@@ -579,11 +579,13 @@ const T={key:'T',name:'Тюльпаны',short:'Тюльпаны',color:'--tul',
  conclusion:'Небольшой CAPEX, высокая рентабельность и быстрая окупаемость, но выручка почти целиком приходится на последний сезон, а результат зависит от потерь при размножении и сроков продаж. Горизонт 8 лет, без господдержки.'};
 
 const almondCapex = 180;
-const almondPrice = 250;
+const almondPrice = 400;
 const almondArea = 60;
-const almondHarvest = [0, 0, 0, 0, 30, 60, 102, 138, 180, 180, 180, 180, 180, 180, 180];
+const almondFullHarvest = 240;
+const almondHarvest = [0, 0, 0, 0, 40, 80, 136, 184, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest];
+const almondSupport = 80;
 const almondFixedCost = 2;
-const almondVariableCost = (180 * 0.06 - almondFixedCost) / 180;
+const almondVariableCost = (almondFullHarvest * 0.06 - almondFixedCost) / almondFullHarvest;
 const M = {
  key: 'M', name: 'Миндаль', short: 'Миндаль', color: '--almond', area: almondArea, areaTxt: '60 га', unit: 'т',
  vol: almondHarvest,
@@ -591,23 +593,23 @@ const M = {
  opex: almondHarvest.map((volume, year) => year < 4 ? 0 : almondFixedCost + volume * almondVariableCost),
  hc: almondVariableCost,
  capex: [110, 70, ...Array(13).fill(0)],
- capexCreate: almondCapex, sub: Array(15).fill(0), subTotal: 0,
- priceTxt: '250 ₽/кг в скорлупе', priceBase: almondPrice, priceUnit: '₽/кг', priceDigits: 0,
- yieldTxt: '3 т/га на плато',
+ capexCreate: almondCapex, sub: almondHarvest.map((_,year) => year === 3 ? almondSupport : 0), subTotal: almondSupport,
+ priceTxt: '400 ₽/кг в скорлупе', priceBase: almondPrice, priceUnit: '₽/кг', priceDigits: 0,
+ yieldTxt: '4 т/га на плато',
  fin: {base: 'debt', years: 10, l1: 0, r1: .05, term: 15},
  finTitle: 'Финансирование',
  finRows: [['Подтверждённый льготный кредит','В базу заложено 0 ₽'], ['Прочее финансирование','15% по умолчанию, ставка на вкладке меняется']],
  finNote: 'Поток проекта считается до процентов. Прочее финансирование начисляется на накопленный дефицит по правилам общей модели. Условия кредита и субсидий требуют подтверждения.',
  ind: {costNote: 'Базовая себестоимость на плато 60 ₽/кг, включая 2 млн ₽ постоянных расходов', priceSub: factor => fmt(almondPrice * factor, 0) + ' ₽/кг в скорлупе', grossSub: row => fmt(row.vol / almondArea, 1) + ' т/га'},
  capexItems: [['Закладка сада и уход до плодоношения',82],['Насосы, накопитель и капельное орошение',13],['Доработка ореха и хранение',28],['Техника для сада и уборки',37],['Энергетика, дороги и ограждение',20]],
- subItems: [], sens: [],
- plateau: {rev: 45, opex: 10.8, ebitda: 34.2, volume: '180 т'},
- opexItems: [['Постоянные затраты',2],['Переменные затраты на плато',8.8]],
- sensNote: 'Показатели пересчитаны общей моделью. Сценарий поддержки 75 млн ₽ в 4-м году иллюстрирует эффект возможного поступления. Сумма и дата не подтверждены.',
- facts: [['Источники','«Миндаль.docx» и раздел «Миндаль» файла «Крым, с. Фрунзе (2).docx»'],['Площадь и участок','60 га, запад Крыма, земля в долгосрочной аренде'],['Урожайность в документах','2–4 т/га в скорлупе; база 3 т/га'],['Первый урожай','Для расчёта принят 5-й год'],['Плато','Для расчёта принят 9-й год; 180 т'],['Цена в двух документах','200–300 и 300–400 ₽/кг; базовый сценарий 250 ₽/кг, дополнительные уровни в стресс-тесте'],['Полный CAPEX','В документах 150–210 и 180–210 млн ₽; база 180 млн ₽'],['Календарь вложений','Модельное допущение: 110 и 70 млн ₽ в первые два года; уход до плодоношения входит в закладку'],['Себестоимость','60 ₽/кг по документам. На плато это 10,8 млн ₽, из которых 2 млн ₽ приняты постоянными'],['Артезианская вода','Ориентир потребности 4 000 м³ в месяц для 40 тыс. деревьев. Доступность мощности и воды на участок требует проверки']],
+ subItems: [['Сценарная господдержка, поступление в 4-м году',almondSupport]], sens: [],
+ plateau: {rev: 96, opex: 14.4, ebitda: 81.6, volume: '240 т'},
+ opexItems: [['Постоянные затраты',2],['Переменные затраты на плато',12.4]],
+ sensNote: 'Стресс-тесты рассчитаны от базовых 400 ₽/кг, 240 т и 80 млн ₽ поддержки. Сценарий без поддержки показывает эффект её полного исключения. Поступление в 4-м году принято для расчёта.',
+ facts: [['Источники','«Миндаль.docx» и раздел «Миндаль» файла «Крым, с. Фрунзе (2).docx»'],['Площадь и участок','60 га, запад Крыма, земля в долгосрочной аренде'],['Урожайность в документах','2–4 т/га в скорлупе; в базе 4 т/га'],['Первый урожай','Для расчёта принят 5-й год'],['Плато','Для расчёта принят 9-й год; 240 т'],['Цена в двух документах','200–300 и 300–400 ₽/кг; базовый сценарий 400 ₽/кг'],['Полный CAPEX','В документах 150–210 и 180–210 млн ₽; база 180 млн ₽'],['Календарь вложений','Модельное допущение: 110 и 70 млн ₽ в первые два года; уход до плодоношения входит в закладку'],['Господдержка','80 млн ₽ по базовому сценарию; модельное поступление в 4-м году. Сумма регулируется ползунком'],['Себестоимость','60 ₽/кг по документам. На плато это 14,4 млн ₽, из которых 2 млн ₽ приняты постоянными'],['Артезианская вода','Ориентир потребности 4 000 м³ в месяц для 40 тыс. деревьев. Доступность мощности и воды на участок требует проверки']],
  risks: [['Заморозки','Раннее цветение','Поздноцветущие сорта, оценка рельефа и противозаморозковой защиты'],['Опыление','Для части сортов нужен опылитель','Проверить совместимость и схему посадки'],['Скважина','Лицензия хозяйства и фактический дебит ограничивают доступный объём','Проверить паспорт, лимит, сезонную нагрузку других культур и качество воды'],['Энергетика','Бюджет и сроки присоединения под вопросом','Взять технические условия и коммерческую смету'],['Господдержка','Уходные субсидии меняются по годам','Проверить условия и график выплаты']],
  recs: ['Подтвердить доступный объём полива и условия подключения электричества', 'Сверить смету закладки, орошения и линии доработки по коммерческим предложениям', 'Закрепить цену сбыта миндаля в скорлупе, сорта и схему опыления'],
- conclusion: 'Миндальный сад, 60 га. Расчёт на 15 лет, 180 млн ₽ капзатрат, без подтверждённой господдержки. График инвестиций и урожая принят для сценарного расчёта.'
+ conclusion: 'Миндальный сад, 60 га. В базе 400 ₽/кг, 240 т на плато, 180 млн ₽ капзатрат и 80 млн ₽ сценарной господдержки. Горизонт 15 лет.'
 };
 
 
@@ -660,14 +662,14 @@ function calc(D,s){s=Object.assign({},S0,s||{});
  return{rows,npv,irr:irrOf(cfs),pay,peak:-peak,peakY,cumEnd:last.cum,n,totDep,totIntr,npvI:cfI.reduce((a,v,t)=>a+v/Math.pow(1+s.r,t+1),0),irrI:irrOf(cfI),payI,cumCEnd:cumC,cumC8:rows[7]?rows[7].cumC:null,peakI:-peakI,peakIY,cumBalEnd:last.cumBal,plateau:D.key==='K'?rows[D.pIdx].ebitda:rows.reduce((m,r)=>r.ebitda>m?r.ebitda:m,-1e9),totSub:rows.reduce((a,r)=>a+r.sub,0),totCapex:rows.reduce((a,r)=>a+r.capex,0)}}
 
 const almondScenarios = [
- ['База без поддержки', M, {}], ['Цена 200 ₽/кг', M, {pf:.8}],
- ['Цена 300 ₽/кг', M, {pf:1.2}], ['Цена 350 ₽/кг', M, {pf:1.4}],
- ['Цена 400 ₽/кг', M, {pf:1.6}], ['Урожай 2 т/га', M, {yf:2/3}],
- ['Урожай 4 т/га', M, {yf:4/3}], ['CAPEX 210 млн ₽', M, {cf:210/180}],
- ['Поддержка 75 млн ₽ в 4-м году', {...M, subTotal:75, sub:M.sub.map((amount,year) => year === 3 ? 75 : amount)}, {}]
+ ['База: 80 млн ₽ поддержки', {}], ['Цена 200 ₽/кг', {pf:.5}],
+ ['Цена 300 ₽/кг', {pf:.75}], ['Цена 350 ₽/кг', {pf:.875}],
+ ['Урожай 2 т/га', {yf:.5}], ['Урожай 3 т/га', {yf:.75}],
+ ['CAPEX 210 млн ₽', {cf:210/180}], ['Поддержка 40 млн ₽', {sf:.5}],
+ ['Без господдержки', {sf:0}]
 ];
-M.sens = almondScenarios.map(([label, model, settings]) => {
- const result = calc(model, settings);
+M.sens = almondScenarios.map(([label, settings]) => {
+ const result = calc(M, settings);
  return [label, result.npv, result.irr];
 });
 function fullCost(D,c){const rs=c.rows.slice(D.pIdx);if(D.key==='T'){const r=rs[0];return (r.opex+r.dep+r.intr)/D.ind.costDen}
@@ -768,7 +770,7 @@ function barLine(el,rows,color){const W=Math.max(300,el.clientWidth||600),H=300,
 
 function cmpTab(){
 
- const a=calc(A),v=calc(V),t=calc(T),m=calc(M);
+ const a=calc(A),v=calc(V),t=calc(T),m=calc(M,{sf:ST.M.sf});
 
  const R=[[A,a],[V,v],[T,t],[M,m]];
 
@@ -914,7 +916,7 @@ function cmpTab(){
 
  const irrs=D=>ks.map(k=>{const r=calc(D,{pf:1+k/100}).irr;return r==null?null:r*100});
 
- lineChart($('#ch-irr'),[{name:'Яблоневый сад',color:'--apple',pts:irrs(A)},{name:'Виноградник',color:'--vine',pts:irrs(V)},{name:'Тюльпаны',color:'--tul',pts:irrs(T)},{name:'Миндаль',color:M.color,pts:irrs(M)}],{xs:ks,refs:[{v:12,color:'var(--amber)'}],label:'IRR от цены',xfmt:x=>(x>0?'+':x<0?'−':'')+Math.abs(x)+'%',yfmt:t=>fmt(t,0)+'%',vfmt:v=>fmt(v,1)+'%',xtip:x=>'Цена '+(x>0?'+':x<0?'−':'')+Math.abs(x)+'% к базовой',h:300,zero:true});
+ lineChart($('#ch-irr'),[{name:'Яблоневый сад',color:'--apple',pts:irrs(A)},{name:'Виноградник',color:'--vine',pts:irrs(V)},{name:'Тюльпаны',color:'--tul',pts:irrs(T)},{name:'Миндаль',color:M.color,pts:ks.map(k=>{const irr=calc(M,{pf:1+k/100,sf:ST.M.sf}).irr;return irr==null?null:irr*100})}],{xs:ks,refs:[{v:12,color:'var(--amber)'}],label:'IRR от цены',xfmt:x=>(x>0?'+':x<0?'−':'')+Math.abs(x)+'%',yfmt:t=>fmt(t,0)+'%',vfmt:v=>fmt(v,1)+'%',xtip:x=>'Цена '+(x>0?'+':x<0?'−':'')+Math.abs(x)+'% к базовой',h:300,zero:true});
 
  const bA=breakEvenPrice(A),bV=breakEvenPrice(V),bT=breakEvenPrice(T);
 
@@ -966,18 +968,18 @@ function fillAlmondComparison(result) {
  const peak = (value, year) => fmt(value,1) + ' (год ' + year + ')';
  const m = value => fmt(value,1);
  const price = rate => {
-  const factor = breakEvenPrice(M,{r:rate});
+  const factor = breakEvenPrice(M,{r:rate,sf:ST.M.sf});
   return factor == null ? 'вне диапазона' : fmt(M.priceBase*factor,0) + ' ₽/кг';
  };
  const columns = {
   'Площадь, га': M.area,
   'Горизонт расчёта': result.n + ' лет',
   'CAPEX создания, млн ₽': m(M.capexCreate),
-  'Господдержка (расчётная), млн ₽': '0 в базе',
-  'Чистый CAPEX после поддержки, млн ₽': m(M.capexCreate),
-  'Чистый CAPEX на 1 га, млн ₽': m(M.capexCreate/M.area),
+  'Господдержка (расчётная), млн ₽': m(result.totSub),
+  'Чистый CAPEX после поддержки, млн ₽': m(M.capexCreate-result.totSub),
+  'Чистый CAPEX на 1 га, млн ₽': m((M.capexCreate-result.totSub)/M.area),
   'Льготный кредит под 5%, млн ₽': '0 в базе',
-  'Собственные средства (заём под 15%), млн ₽': m(M.capexCreate),
+  'Собственные средства (заём под 15%), млн ₽': m(M.capexCreate-result.totSub),
   'Валовый сбор на плато': fmt(r.vol,0) + ' т (' + m(r.vol/M.area) + ' т/га)',
   'Цена реализации': M.priceTxt,
   'Выручка на плато, млн ₽/год': m(r.rev),
@@ -1050,7 +1052,7 @@ function projShell(D){const k=D.key;
 
    <div><label>Капзатраты <output id="o${k}cf"></output></label><input type="range" min="-30" max="50" step="5" value="0" data-k="${k}" data-p="cf"></div>
 
-   ${D.subItems.length?`<div><label>Получено субсидий от расчётных <output id="o${k}sf"></output></label><input type="range" min="0" max="100" step="10" value="100" data-k="${k}" data-p="sf"></div>`:''}
+   ${D.subItems.length?`<div><label>${k==='M'?'Господдержка':'Получено субсидий от расчётных'} <output id="o${k}sf"></output></label><input type="range" aria-label="${k==='M'?'Господдержка, млн ₽':'Доля от расчётных субсидий, %'}" min="0" max="${k==='M'?D.subTotal:100}" step="${k==='M'?1:10}" value="${k==='M'?D.subTotal:100}" data-k="${k}" data-p="sf"></div>`:''}
 
    <div><label>Ставка дисконтирования <output id="o${k}r"></output></label><input type="range" min="5" max="20" step="1" value="12" data-k="${k}" data-p="r"></div>
 
@@ -1144,7 +1146,7 @@ function projLive(D){const k=D.key,s=ST[k],c=calc(D,s);
 
  const sgn=x=>(x>0?'+':x<0?'−':'')+Math.abs(x)+'%';
 
- set('pf',sgn(Math.round((s.pf-1)*100)));set('yf',sgn(Math.round((s.yf-1)*100)));set('cf',sgn(Math.round((s.cf-1)*100)));set('sf',Math.round(s.sf*100)+'%');set('r',Math.round(s.r*100)+'%');set('fr',Math.round(s.fr*100)+'%');set('lf',Math.round(s.lf*100)+'%');$$('.finchk').forEach(x=>x.checked=FIN);
+ set('pf',sgn(Math.round((s.pf-1)*100)));set('yf',sgn(Math.round((s.yf-1)*100)));set('cf',sgn(Math.round((s.cf-1)*100)));set('sf',k==='M'?fmt(c.totSub,0)+' млн ₽':Math.round(s.sf*100)+'%');set('r',Math.round(s.r*100)+'%');set('fr',Math.round(s.fr*100)+'%');set('lf',Math.round(s.lf*100)+'%');$$('.finchk').forEach(x=>x.checked=FIN);
 
  const base=calc(D,{r:s.r}),dif=Object.keys(S0).some(p=>p!=='fr'&&p!=='lf'&&Math.abs(s[p]-S0[p])>1e-9);
 
@@ -1258,11 +1260,11 @@ function mountProjects(){PR.forEach(D=>{$('#tab-'+D.key).innerHTML=projShell(D);
 
  document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||!t.dataset.p)return;const k=t.dataset.k,p=t.dataset.p,v=+t.value;
 
-  ST[k][p]=(p==='sf'||p==='r'||p==='fr'||p==='lf')?v/100:1+v/100;(k==='K'?kLive(K):projLive(PR.find(d=>d.key===k)))});
+  ST[k][p]=k==='M'&&p==='sf'?v/M.subTotal:(p==='sf'||p==='r'||p==='fr'||p==='lf')?v/100:1+v/100;(k==='K'?kLive(K):projLive(PR.find(d=>d.key===k)))});
 
  document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-reset]');if(!b)return;const k=b.dataset.reset;ST[k]=Object.assign({},S0);
 
-  $$(`#tab-${k} input[type=range]`).forEach(i=>{i.value=({pf:0,yf:0,cf:0,sf:100,r:12,fr:15,lf:100})[i.dataset.p]});(k==='K'?kLive(K):projLive(PR.find(d=>d.key===k)))})}
+  $$(`#tab-${k} input[type=range]`).forEach(i=>{i.value=k==='M'&&i.dataset.p==='sf'?M.subTotal:({pf:0,yf:0,cf:0,sf:100,r:12,fr:15,lf:100})[i.dataset.p]});(k==='K'?kLive(K):projLive(PR.find(d=>d.key===k)))})}
 
 
 

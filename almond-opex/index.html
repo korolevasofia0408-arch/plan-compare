@@ -587,13 +587,9 @@ const almondArea = 60;
 const almondFullHarvest = 240;
 const almondHarvest = [0, 0, 0, 0, 40, 80, 136, 184, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest, almondFullHarvest];
 const almondSupport = 80;
-// Ставки кориандра из «ПП 2028.xlsx», лист «ПП на 2027»: AF14, AF28 и AF50 в расчёте на площадь AF5.
-const almondOpexFields = [
- {key:'field', name:'Расходы по техкартам и аренда земли', base:17814.32},
- {key:'account25', name:'Общепроизводственные расходы (счёт 25)', base:5197.28},
- {key:'account23', name:'Производственные расходы (счёт 23)', base:9611.27}
-];
-const almondAnnualOpex = almondOpexFields.reduce((sum, field) => sum + field.base, 0) * almondArea / 1e6;
+// Затраты кориандра из «ПП 2028.xlsx», лист «ПП на 2027», AF13 ÷ AF5.
+const almondOpexDefault = 32.62287;
+const almondAnnualOpex = almondOpexDefault * almondArea / 1000;
 const M = {
  key: 'M', name: 'Миндаль', short: 'Миндаль', color: '--almond', area: almondArea, areaTxt: '60 га', unit: 'т',
  vol: almondHarvest,
@@ -677,8 +673,7 @@ const almondScenarios = [
  ['Без господдержки', {sf:0}]
 ];
 const almondOpexStorage = 'plan-compare-almond-opex-per-ha';
-const almondOpexDefaults = () => Object.fromEntries(almondOpexFields.map(field=>[field.key,field.base]));
-let almondOpexSettings = almondOpexDefaults();
+let almondOpexRate = almondOpexDefault;
 
 function almondOpexValue(raw) {
  const text = String(raw).trim().replace(',', '.');
@@ -688,12 +683,11 @@ function almondOpexValue(raw) {
 }
 
 function saveAlmondOpex() {
- try { localStorage.setItem(almondOpexStorage, JSON.stringify(almondOpexSettings)); } catch (_) {}
+ try { localStorage.setItem(almondOpexStorage, JSON.stringify({rate:almondOpexRate})); } catch (_) {}
 }
 
 function applyAlmondOpex() {
- const perHa = almondOpexFields.reduce((sum, {key}) => sum + almondOpexSettings[key], 0);
- const annual = perHa * M.area / 1e6;
+ const annual = almondOpexRate * M.area / 1000;
  M.opex = M.vol.map(volume => volume > 0 ? annual : 0);
  M.sens = almondScenarios.map(([label, settings]) => {
   const result = calc(M, settings);
@@ -705,55 +699,49 @@ function showAlmondOpex(result) {
  const summary = $('#almond-opex-total');
  if (!summary) return;
  const plateau = result.rows[M.pIdx];
- summary.textContent = `Итого на плато ${fmt(plateau.opex,2)} млн ₽ в год · ${fmt(plateau.opex/M.area*1000,1)} тыс. ₽/га · ${fmt(plateau.opex/plateau.vol*1000,1)} ₽/кг`;
+ summary.innerHTML = `<div class="rowl"><span><b>OPEX в год, млн ₽</b></span><b>${fmt(plateau.opex,2)}</b></div><div class="rowl"><span>Выручка на плато, млн ₽</span><b>${fmt(plateau.rev,1)}</b></div><div class="rowl"><span>EBITDA на плато, млн ₽</span><b class="${sg(plateau.ebitda)}">${fmt(plateau.ebitda,1)}</b></div>`;
 }
 
 function mountAlmondOpex() {
  const panel = $('#pM');
- panel.innerHTML = almondOpexFields.map(({key,name,base}) => {
-  const unit = '₽/га в год';
-  const attr = 'data-almond-opex="' + key + '"';
-  return `<div class="rowl kcap"><span><b>${name}</b><small class="nt">${unit}</small></span>${kIn(attr, kC(almondOpexSettings[key]), name+', '+unit,kC(base))}</div>`;
- }).join('') + '<p class="note" id="almond-opex-total" aria-live="polite"></p>';
- panel.addEventListener('input', event => {
-  const field = event.target;
-  const key = field.dataset.almondOpex;
-  if (!key) return;
+ const label = 'Затраты на гектар, тыс. ₽/га';
+ panel.innerHTML = `<div class="rowl kcap"><span>${label}<small class="nt">План хозяйства на 2027 г., «ЗАТРАТЫ всего» по кориандру. Начисляются с 5-го года.</small></span>${kIn('data-almond-opex="rate"',kC(almondOpexRate),label,kC(almondOpexDefault))}</div><div id="almond-opex-total" aria-live="polite"></div>`;
+ const field = panel.querySelector('[data-almond-opex]');
+ field.addEventListener('input', () => {
   const value = almondOpexValue(field.value);
   field.setAttribute('aria-invalid', String(value === null));
   if (value === null) return;
-  almondOpexSettings[key] = value;
+  almondOpexRate = value;
   saveAlmondOpex();
   applyAlmondOpex();
   projStatic(M);
   projLive(M);
  });
- panel.addEventListener('focusout',event=>{
-  const field=event.target,key=field.dataset.almondOpex;
-  if (!key) return;
-  field.value=kC(almondOpexSettings[key]);
+ field.addEventListener('focusout', () => {
+  field.value = kC(almondOpexRate);
   field.removeAttribute('aria-invalid');
  });
 }
 
 function resetAlmondOpex() {
- almondOpexSettings = almondOpexDefaults();
+ almondOpexRate = almondOpexDefault;
  saveAlmondOpex();
  applyAlmondOpex();
- for (const input of $$('#pM [data-almond-opex]')) {
-  input.value=kC(almondOpexSettings[input.dataset.almondOpex]);
-  input.removeAttribute('aria-invalid');
+ const field = $('#pM [data-almond-opex]');
+ if (field) {
+  field.value = kC(almondOpexRate);
+  field.removeAttribute('aria-invalid');
  }
  projStatic(M);
 }
 
 try {
  const saved = JSON.parse(localStorage.getItem(almondOpexStorage) || '{}') || {};
- for (const field of almondOpexFields) {
-  const value = almondOpexValue(saved[field.key]);
-  if (value !== null) almondOpexSettings[field.key] = value;
- }
+ const previousRates = ['field','account25','account23'].map(key => almondOpexValue(saved[key]));
+ const previousTotal = previousRates.every(value => value !== null) ? previousRates.reduce((sum, value) => sum + value, 0) / 1000 : null;
+ almondOpexRate = almondOpexValue(saved.rate) ?? previousTotal ?? almondOpexDefault;
 } catch (_) {}
+
 applyAlmondOpex();
 
 
